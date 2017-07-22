@@ -31,12 +31,18 @@ def get_view_rate_limit():
     return getattr(g, '_view_rate_limit', None)
 
 
-def on_over_limit(limit):
+def on_over_limit(limit): 
+    '''
+    处理超过请求限制的函数：让超过限制后，会传过来一个RateLimite对象，可以取出来里面有用的信息，比如操作Redis
+    这里只是返回一个错误的字符串提示信息，实际中可以返回给用户一个temple，更美观。
+    这也就解释了为什么下面的ratelimit函数里没有使用lambda的方式，因为这里只有一行代码是简化的方式，
+    实际中，如果出发访问限制后的操作会很多。
+    '''
     return (jsonify({'data': 'You hit the rate limit', 'error': '429'}), 429)
 
 
 def ratelimit(limit, per=300, send_x_headers=True,
-              over_limit=on_over_limit, #下文的onver_limit,为什么不用lambda的方式
+              over_limit=on_over_limit, #为什么不用lambda的方式? 已解决
               scope_func=lambda: request.remote_addr,
               key_func=lambda: request.endpoint):
     '''
@@ -49,7 +55,7 @@ def ratelimit(limit, per=300, send_x_headers=True,
             rlimit = RateLimit(key, limit, per, send_x_headers)
             g._view_rate_limit = rlimit
             if over_limit is not None and rlimit.over_limit:
-                return over_limit(rlimit)   #如果突破了限制就返回错误信息，否则继续运行装饰过的f函数
+                return over_limit(rlimit)   #如果突破了限制就返回错误信息，否则继续循环运行装饰过的f函数
             return f(*args, **kwargs)
         return update_wrapper(rate_limited, f)
     return decorator
